@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>RehiTrack IoT – Museo El Rehilete</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  🏛️ RehiTrack IoT – Museo El Rehilete
+</header>
+
+<nav class="tabs">
+  <button class="tab active" onclick="mostrarVista('dashboard', this)">Dashboard</button>
+  <button class="tab" onclick="mostrarVista('graficos', this)">Gráficos</button>
+  <button class="tab" onclick="mostrarVista('admin', this)">Administración</button>
+  <button class="tab" onclick="mostrarVista('historial', this)">Historial</button>
+</nav>
+
+<main class="container">
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="vista activa">
+    <h2>Estado de Salas</h2>
+    <div id="salas" class="salas-grid"></div>
+
+    <h2>Monitoreo en Tiempo Real</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Sala</th>
+          <th>Evento</th>
+          <th>Tipo</th>
+          <th>Visitantes</th>
+          <th>Fecha / Hora</th>
+        </tr>
+      </thead>
+      <tbody id="tablaEventos"></tbody>
+    </table>
+  </section>
+
+  <!-- GRÁFICOS -->
+  <section id="graficos" class="vista">
+    <h2>Ocupación de Salas</h2>
+
+    <div style="max-width:600px;">
+      <canvas id="graficoSalas" height="90"></canvas>
+    </div>
+
+    <p id="resumenTotales" style="margin-top:10px; color:#cbd5f5;">
+      Total entradas: 0 | Total salidas: 0
+    </p>
+  </section>
+
+  <!-- ADMINISTRACIÓN -->
+  <section id="admin" class="vista">
+    <h2>Administración de Salas</h2>
+
+    <button class="entrada" id="btnAgregarSala">
+      ➕ Agregar nueva sala
+    </button>
+
+    <table style="margin-top:20px;">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Capacidad Máx</th>
+          <th>Visitantes</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaAdmin"></tbody>
+    </table>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section id="historial" class="vista">
+    <h2>Historial de Eventos</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Sala</th>
+          <th>Evento</th>
+          <th>Tipo</th>
+          <th>Visitantes</th>
+          <th>Fecha / Hora</th>
+        </tr>
+      </thead>
+      <tbody id="tablaEventosHistorial"></tbody>
+    </table>
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

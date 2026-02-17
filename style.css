@@ -1,0 +1,123 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #020617, #000);
+  color: #e5e7eb;
+}
+
+header {
+  background: linear-gradient(90deg, #020617, #0ea5e9);
+  padding: 16px 24px;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.container {
+  padding: 24px;
+}
+
+/* PESTAÑAS */
+.tabs {
+  display: flex;
+  background: #020617;
+  border-bottom: 1px solid #0ea5e9;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tab.active {
+  color: #38bdf8;
+  border-bottom: 3px solid #38bdf8;
+}
+
+/* VISTAS */
+.vista { display: none; }
+.vista.activa { display: block; }
+
+h2 {
+  margin-top: 40px;
+  color: #38bdf8;
+}
+
+/* SALAS */
+.salas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.sala-card {
+  background: rgba(2, 6, 23, 0.9);
+  border: 1px solid #0ea5e9;
+  border-radius: 14px;
+  padding: 16px;
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.estado {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.disponible {
+  background: #16a34a;
+  color: #052e16;
+}
+
+.saturada {
+  background: #dc2626;
+  color: #fee2e2;
+}
+
+button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.entrada { background: #2563eb; color: white; }
+.salida { background: #facc15; margin-left: 6px; }
+
+/* TABLAS */
+table {
+  width: 100%;
+  margin-top: 15px;
+  border-collapse: collapse;
+}
+
+th {
+  background: #020617;
+  color: #38bdf8;
+  padding: 10px;
+  text-align: left;
+}
+
+td {
+  padding: 8px;
+  border-bottom: 1px solid #334155;
+}
