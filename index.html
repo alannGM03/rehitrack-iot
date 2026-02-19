@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>RehiTrack IoT – Museo El Rehilete</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -13,89 +14,84 @@
 
 <nav class="tabs">
   <button class="tab active" onclick="mostrarVista('dashboard', this)">Dashboard</button>
-  <button class="tab" onclick="mostrarVista('graficos', this)">Gráficos</button>
+  <button class="tab" onclick="mostrarVista('estatus', this)">Estatus</button>
   <button class="tab" onclick="mostrarVista('admin', this)">Administración</button>
-  <button class="tab" onclick="mostrarVista('historial', this)">Historial</button>
 </nav>
 
 <main class="container">
 
   <!-- DASHBOARD -->
   <section id="dashboard" class="vista activa">
-    <h2>Estado de Salas</h2>
+    <h2>Estado de Salas (Control Remoto)</h2>
+    <div id="estadoSalas" class="estado-global"></div>
     <div id="salas" class="salas-grid"></div>
-
-    <h2>Monitoreo en Tiempo Real</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Sala</th>
-          <th>Evento</th>
-          <th>Tipo</th>
-          <th>Visitantes</th>
-          <th>Fecha / Hora</th>
-        </tr>
-      </thead>
-      <tbody id="tablaEventos"></tbody>
-    </table>
   </section>
 
-  <!-- GRÁFICOS -->
-  <section id="graficos" class="vista">
-    <h2>Ocupación de Salas</h2>
+  <!-- ESTATUS -->
+  <section id="estatus" class="vista">
+    <h2>Estatus del Sistema</h2>
 
-    <div style="max-width:600px;">
-      <canvas id="graficoSalas" height="90"></canvas>
+    <div class="estatus-layout">
+      <div class="estatus-card">
+        <h3>📊 Aforo por Sala</h3>
+        <canvas id="graficoEstatus"></canvas>
+      </div>
+
+      <div class="estatus-card">
+        <h3>📋 Últimos 10 Eventos</h3>
+        <table class="tabla-estatus">
+          <thead>
+            <tr>
+              <th>Sala</th>
+              <th>Evento</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="tablaHistorial"></tbody>
+        </table>
+      </div>
     </div>
-
-    <p id="resumenTotales" style="margin-top:10px; color:#cbd5f5;">
-      Total entradas: 0 | Total salidas: 0
-    </p>
   </section>
 
   <!-- ADMINISTRACIÓN -->
   <section id="admin" class="vista">
-    <h2>Administración de Salas</h2>
+    <h2>Panel de Control IoT – Administración</h2>
+    <p class="subtitulo">Gestión de salas y aforo</p>
 
-    <button class="entrada" id="btnAgregarSala">
-      ➕ Agregar nueva sala
-    </button>
+    <!-- AGREGAR SALA -->
+    <div class="admin-panel" style="margin-bottom:25px;">
+      <h3>➕ Agregar nueva sala</h3>
+      <div class="admin-add">
+        <input id="nuevaSalaNombre" placeholder="Nombre de la sala">
+        <input id="nuevaSalaAforoActual" type="number" min="0" placeholder="Aforo actual">
+        <input id="nuevaSalaAforoMax" type="number" min="1" placeholder="Aforo máximo">
+        <button onclick="agregarSala()">Agregar</button>
+      </div>
+    </div>
 
-    <table style="margin-top:20px;">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Capacidad Máx</th>
-          <th>Visitantes</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaAdmin"></tbody>
-    </table>
-  </section>
-
-  <!-- HISTORIAL -->
-  <section id="historial" class="vista">
-    <h2>Historial de Eventos</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Sala</th>
-          <th>Evento</th>
-          <th>Tipo</th>
-          <th>Visitantes</th>
-          <th>Fecha / Hora</th>
-        </tr>
-      </thead>
-      <tbody id="tablaEventosHistorial"></tbody>
-    </table>
+    <!-- TABLA ADMIN -->
+    <div class="admin-panel">
+      <h3>📋 Ajuste manual de aforo</h3>
+      <table class="tabla-admin">
+        <thead>
+          <tr>
+            <th>Sala</th>
+            <th>👥 Aforo Actual</th>
+            <th>🚦 Aforo Máx</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tablaAdmin"></tbody>
+      </table>
+    </div>
   </section>
 
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="app.js"></script>
+<footer class="footer">
+  Desarrollado por <strong>Alan González Mejía</strong> · RehiTrack IoT
+</footer>
 
+<script src="app.js"></script>
 </body>
 </html>

@@ -1,279 +1,186 @@
-const API_URL = "https://698a177bc04d974bc6a15370.mockapi.io/api/v1/SalasRehilete";
-const MAX_CAPACIDAD = 80;
+let cacheSalas = [
+  { nombre:"Sala Planetario", visitantes_actuales:5, capacidad_max:70, ventilacion:"media", iluminacion:"normal", activo:true },
+  { nombre:"Sala Avión", visitantes_actuales:8, capacidad_max:15, ventilacion:"alta", iluminacion:"tenue", activo:true },
+  { nombre:"Luz y Óptica", visitantes_actuales:20, capacidad_max:50, ventilacion:"media", iluminacion:"normal", activo:true }
+];
 
-// ELEMENTOS
-const salasDiv = document.getElementById("salas");
-const tablaEventos = document.getElementById("tablaEventos");
-const tablaEventosHistorial = document.getElementById("tablaEventosHistorial");
-const tablaAdmin = document.getElementById("tablaAdmin");
-const btnAgregarSala = document.getElementById("btnAgregarSala");
-const resumenTotales = document.getElementById("resumenTotales");
-
-// =====================
-// ESTADO GLOBAL
-// =====================
-let cacheSalas = [];
+let historial = [];
 let grafico = null;
 
-// 🔥 BUFFER DE EVENTOS (CLAVE)
-let colaEventos = JSON.parse(localStorage.getItem("colaEventos")) || [];
+// ================= UTILIDADES =================
+function porcentaje(s){ return s.visitantes_actuales / s.capacidad_max; }
 
-// HISTORIAL
-let historial = JSON.parse(localStorage.getItem("historial")) || [];
-let totalEntradas = parseInt(localStorage.getItem("totalEntradas")) || 0;
-let totalSalidas = parseInt(localStorage.getItem("totalSalidas")) || 0;
-
-// =====================
-// CARGA DE DATOS
-// =====================
-async function cargarDatos() {
-  const res = await fetch(API_URL);
-  cacheSalas = await res.json();
-
-  renderSalas();
-  renderAdmin(cacheSalas);
-  renderGrafico(cacheSalas);
-  renderResumen();
+function registrarEvento(sala, evento){
+  historial.unshift({ sala:sala.nombre, evento, fecha:new Date().toLocaleString() });
+  historial = historial.slice(0,10);
 }
 
-// =====================
-// RENDER SALAS
-// =====================
-function renderSalas() {
-  salasDiv.innerHTML = "";
+// ================= ALERTAS =================
+function evaluarAlertas() {
+  cacheSalas.forEach(s => {
+    s.alerta = false;
+    s.mensaje = "";
 
-  cacheSalas.forEach(sala => {
-    const llena = sala.visitantes_actuales >= MAX_CAPACIDAD;
-    const estado = llena ? "saturada" : "disponible";
+    // Si la sala está apagada, no evaluar nada
+    if (!s.activo) return;
 
-    const card = document.createElement("div");
-    card.className = "sala-card";
+    const porcentaje = s.visitantes_actuales / s.capacidad_max;
 
-    card.innerHTML = `
-      <h3>${sala.nombre}</h3>
-      <p>Visitantes actuales: <strong>${sala.visitantes_actuales}</strong></p>
-      <span class="estado ${estado}">${estado}</span>
-      <div class="botones">
-        <button class="entrada" ${llena ? "disabled" : ""}>+ Entrada</button>
-        <button class="salida">- Salida</button>
-      </div>
-    `;
+    /* ========= VENTILACIÓN ========= */
+    let ventilacionEsperada = "baja";
 
-    card.querySelector(".entrada").onclick = () =>
-      accionUsuario(sala.id, "entrada");
+    if (porcentaje > 2/3) {
+      ventilacionEsperada = "alta";
+    } else if (porcentaje > 1/3) {
+      ventilacionEsperada = "media";
+    }
 
-    card.querySelector(".salida").onclick = () =>
-      accionUsuario(sala.id, "salida");
+    if (s.ventilacion === "apagada" && s.visitantes_actuales > 0) {
+      s.alerta = true;
+      s.mensaje = "Ventilación APAGADA con aforo presente";
+    } 
+    else if (s.ventilacion !== ventilacionEsperada) {
+      s.alerta = true;
+      s.mensaje = `Ventilación incorrecta (esperada: ${ventilacionEsperada.toUpperCase()})`;
+    }
 
-    salasDiv.appendChild(card);
-  });
-}
+    /* ========= ILUMINACIÓN ========= */
+    let iluminacionEsperada = "normal";
 
-// =====================
-// ACCIÓN DEL USUARIO (NO HIPERSENSIBLE)
-// =====================
-function accionUsuario(idSala, tipo) {
-  const sala = cacheSalas.find(s => s.id === idSala);
-  if (!sala) return;
+    if (porcentaje > 0.5) {
+      iluminacionEsperada = "tenue";
+    }
 
-  if (tipo === "entrada" && sala.visitantes_actuales >= MAX_CAPACIDAD) return;
-  if (tipo === "salida" && sala.visitantes_actuales <= 0) return;
+    if (s.iluminacion === "apagada" && s.visitantes_actuales > 0) {
+      s.alerta = true;
+      s.mensaje = "Iluminación APAGADA con aforo presente";
+    } 
+    else if (s.iluminacion !== iluminacionEsperada) {
+      s.alerta = true;
+      s.mensaje = `Iluminación incorrecta (esperada: ${iluminacionEsperada.toUpperCase()})`;
+    }
 
-  // UI inmediata
-  if (tipo === "entrada") sala.visitantes_actuales++;
-  if (tipo === "salida") sala.visitantes_actuales--;
-
-  renderSalas();
-
-  // Guardar evento en cola (NO historial directo)
-  colaEventos.push({
-    sala: sala.nombre,
-    tipo,
-    fecha: new Date().toLocaleString()
-  });
-
-  localStorage.setItem("colaEventos", JSON.stringify(colaEventos));
-
-  // PUT asíncrono
-  fetch(`${API_URL}/${sala.id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sala)
-  });
-}
-
-// =====================
-// PROCESAR EVENTOS (CADA 2s)
-// =====================
-function procesarEventos() {
-  if (colaEventos.length === 0) return;
-
-  colaEventos.forEach(ev => {
-    if (ev.tipo === "entrada") totalEntradas++;
-    if (ev.tipo === "salida") totalSalidas++;
-
-    historial.unshift({
-      sala: ev.sala,
-      evento: ev.tipo === "entrada" ? "Entrada registrada" : "Salida registrada",
-      tipo: ev.tipo,
-      visitantes: 1,
-      fecha: ev.fecha
-    });
-  });
-
-  historial = historial.slice(0, 10);
-
-  colaEventos = [];
-  localStorage.setItem("colaEventos", JSON.stringify([]));
-  localStorage.setItem("historial", JSON.stringify(historial));
-  localStorage.setItem("totalEntradas", totalEntradas);
-  localStorage.setItem("totalSalidas", totalSalidas);
-
-  renderTablas();
-  renderResumen();
-}
-
-// =====================
-// TABLAS
-// =====================
-function renderTablas() {
-  tablaEventos.innerHTML = "";
-  tablaEventosHistorial.innerHTML = "";
-
-  historial.forEach(e => {
-    const fila = `
-      <tr>
-        <td>${e.sala}</td>
-        <td>${e.evento}</td>
-        <td>${e.tipo}</td>
-        <td>${e.visitantes}</td>
-        <td>${e.fecha}</td>
-      </tr>
-    `;
-    tablaEventos.innerHTML += fila;
-    tablaEventosHistorial.innerHTML += fila;
-  });
-}
-
-// =====================
-// RESUMEN
-// =====================
-function renderResumen() {
-  if (!resumenTotales) return;
-  resumenTotales.textContent =
-    `Total entradas: ${totalEntradas} | Total salidas: ${totalSalidas}`;
-}
-
-// =====================
-// GRÁFICO
-// =====================
-function renderGrafico(salas) {
-  const ctx = document.getElementById("graficoSalas");
-  if (!ctx) return;
-
-  const labels = salas.map(s => s.nombre);
-  const data = salas.map(s => s.visitantes_actuales);
-
-  if (grafico) {
-    grafico.data.labels = labels;
-    grafico.data.datasets[0].data = data;
-    grafico.update();
-    return;
-  }
-
-  grafico = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: "#38bdf8"
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: { y: { beginAtZero: true, max: MAX_CAPACIDAD } },
-      plugins: { legend: { display: false } }
+    if (s.alerta) {
+      registrarEvento(s, s.mensaje);
     }
   });
 }
 
-// =====================
-// ADMINISTRACIÓN
-// =====================
-function renderAdmin(salas) {
-  tablaAdmin.innerHTML = "";
+// ================= RENDER =================
+function renderEstadoGlobal(){
+  const a=cacheSalas.filter(s=>s.alerta);
+  estadoSalas.innerHTML=a.length
+    ? a.map(s=>`⚠ ${s.nombre}: ${s.mensaje}`).join("<br>")
+    : "✅ Todas las salas en estado normal";
+}
 
-  salas.forEach(sala => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td><input value="${sala.nombre}" id="n-${sala.id}"></td>
-      <td><input type="number" value="${sala.capacida_max}" id="c-${sala.id}"></td>
-      <td>${sala.visitantes_actuales}</td>
-      <td>
-        <button class="entrada">💾</button>
-        <button class="salida">🗑</button>
-      </td>
+function renderSalas(){
+  salas.innerHTML="";
+  cacheSalas.forEach((s,i)=>{
+    const card=document.createElement("div");
+    card.className="sala-card";
+    card.innerHTML=`
+      <h3>${s.nombre}</h3>
+      <p>👥 Aforo: ${s.visitantes_actuales}/${s.capacidad_max}</p>
+
+      <p>🌬 Ventilación</p>
+      ${["baja","media","alta","apagada"].map(v=>`<button class="${s.ventilacion===v?"activo":""}" onclick="setVent(${i},'${v}')">${v}</button>`).join("")}
+
+      <p>💡 Iluminación</p>
+      ${["normal","tenue","apagada"].map(l=>`<button class="${s.iluminacion===l?"activo":""}" onclick="setLuz(${i},'${l}')">${l}</button>`).join("")}
+
+      <p>🔌 Estado: ${s.activo?"🟢 Encendida":"🔴 Apagada"}</p>
+      <button onclick="encender(${i})">Encender</button>
+      <button onclick="apagar(${i})">Apagar</button>
+
+      ${s.alerta?`<div class="alerta">${s.mensaje}</div>`:""}
     `;
-
-    fila.querySelector(".entrada").onclick = async () => {
-      await fetch(`${API_URL}/${sala.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...sala,
-          nombre: document.getElementById(`n-${sala.id}`).value,
-          capacida_max: parseInt(document.getElementById(`c-${sala.id}`).value)
-        })
-      });
-      cargarDatos();
-    };
-
-    fila.querySelector(".salida").onclick = async () => {
-      await fetch(`${API_URL}/${sala.id}`, { method: "DELETE" });
-      cargarDatos();
-    };
-
-    tablaAdmin.appendChild(fila);
+    salas.appendChild(card);
   });
 }
 
-// =====================
-// AGREGAR SALA
-// =====================
-btnAgregarSala.onclick = async () => {
-  const nombre = prompt("Nombre de la nueva sala:");
-  if (!nombre) return;
-
-  await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      nombre,
-      visitantes_actuales: 0,
-      capacida_max: MAX_CAPACIDAD
-    })
+function renderHistorial(){
+  tablaHistorial.innerHTML="";
+  historial.forEach(h=>{
+    tablaHistorial.innerHTML+=`<tr><td>${h.sala}</td><td>${h.evento}</td><td>${h.fecha}</td></tr>`;
   });
+}
 
-  cargarDatos();
-};
+function renderGrafico(){
+  const labels=cacheSalas.map(s=>s.nombre);
+  const data=cacheSalas.map(s=>s.visitantes_actuales);
 
-// =====================
-// PESTAÑAS
-// =====================
-function mostrarVista(id, boton) {
-  document.querySelectorAll(".vista").forEach(v => v.classList.remove("activa"));
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  if(grafico){
+    grafico.data.datasets[0].data=data;
+    grafico.update();
+    return;
+  }
+  grafico=new Chart(graficoEstatus,{
+    type:"bar",
+    data:{labels,datasets:[{data,backgroundColor:"#38bdf8"}]},
+    options:{responsive:true}
+  });
+}
 
+function renderAdmin(){
+  tablaAdmin.innerHTML="";
+  cacheSalas.forEach((s,i)=>{
+    tablaAdmin.innerHTML+=`
+      <tr>
+        <td>${s.nombre}</td>
+        <td><input type="number" id="act${i}" value="${s.visitantes_actuales}"></td>
+        <td><input type="number" id="max${i}" value="${s.capacidad_max}"></td>
+        <td><button onclick="aplicar(${i})">Aplicar</button></td>
+      </tr>`;
+  });
+}
+
+// ================= ACCIONES =================
+function setVent(i,v){ cacheSalas[i].ventilacion=v; renderTodo(); }
+function setLuz(i,l){ cacheSalas[i].iluminacion=l; renderTodo(); }
+function apagar(i){ cacheSalas[i].activo=false; cacheSalas[i].visitantes_actuales=0; renderTodo(); }
+function encender(i){ cacheSalas[i].activo=true; renderTodo(); }
+
+function aplicar(i){
+  cacheSalas[i].visitantes_actuales=parseInt(document.getElementById(`act${i}`).value);
+  cacheSalas[i].capacidad_max=parseInt(document.getElementById(`max${i}`).value);
+  renderTodo();
+}
+
+function agregarSala(){
+  const n=nuevaSalaNombre.value.trim();
+  const a=parseInt(nuevaSalaAforoActual.value);
+  const m=parseInt(nuevaSalaAforoMax.value);
+  if(!n||isNaN(a)||isNaN(m)) return alert("Datos inválidos");
+  cacheSalas.push({nombre:n,visitantes_actuales:a,capacidad_max:m,ventilacion:"baja",iluminacion:"normal",activo:true});
+  nuevaSalaNombre.value=nuevaSalaAforoActual.value=nuevaSalaAforoMax.value="";
+  renderTodo(); renderAdmin();
+}
+
+// ================= SIMULACIÓN =================
+setInterval(()=>{
+  cacheSalas.forEach(s=>{
+    if(!s.activo) return;
+    s.visitantes_actuales=Math.max(0,Math.min(s.capacidad_max,s.visitantes_actuales+Math.floor(Math.random()*3)-1));
+  });
+  renderTodo();
+},2000);
+
+// ================= GENERAL =================
+function renderTodo(){
+  evaluarAlertas();
+  renderSalas();
+  renderEstadoGlobal();
+  renderHistorial();
+  renderGrafico();
+}
+
+function mostrarVista(id,btn){
+  document.querySelectorAll(".vista").forEach(v=>v.classList.remove("activa"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.getElementById(id).classList.add("activa");
-  boton.classList.add("active");
+  btn.classList.add("active");
 }
 
-// =====================
-// ARRANQUE
-// =====================
-cargarDatos();
-renderTablas();
-setInterval(procesarEventos, 2000);
-setInterval(cargarDatos, 2000);
+renderTodo();
+renderAdmin();
